@@ -6,9 +6,8 @@ EvoSystem.StartSim(
     UseLinReg = 0, # True for LinReg false for Sine
     UseCrowding = 0,
     BitstringLength = 0,
-    Generations = 0,
     MutationRate = 0.0,
     CrossoverRate = 0.0,
-    
+
 
 )

@@ -46,7 +46,7 @@ def SaveResults(Pop):
 def fitnesML(regressor: LinReg, data:pd.DataFrame, bitstring:str):
     X = regressor.get_columns(data.values, bitstring)
     return regressor.get_fitness(X[:,:-1], X[:,-1])
-
+#%%
 def fitnesIntValue(bitstring):
-    return int(bitstring, 2)
+    return int(bitstring, 2) / (2 ** len(bitstring) - 1)
 

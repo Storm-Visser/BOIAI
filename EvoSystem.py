@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 import math
 import random
+import matplotlib.pyplot as plt
 
 from LinReg import LinReg
 
@@ -25,11 +26,12 @@ def StartSim(AmountOfGen, Seed, UseLinReg, UseCrowding, UseReplacementSelection,
             Match(ChildrenM)
             Compete(ChildrenM)
         elif UseFitnessSelection: #survivor selection 1 Add x children to existing pop, select top fitness
-            pass
+            NewPop = FitnessSelection(PopFitness, ChildrenM, UseLinReg, PopSize)
         elif UseReplacementSelection: #survivor selection 2 Replace bot X of population with the new children
             pass
 
         Results.append(SaveResults(NewPop))
+    CreateGraph(Results) 
     return
 
 
@@ -48,17 +50,17 @@ def InitPop(BitstringLength, PopSize):
     return population
 
 def Selection(Pop, UseLinReg, AmountOfParents):
-    Selected = dict()
+    Selected = []
     for Individual in Pop:
         if UseLinReg:
             Fitness = fitnessML(Individual)
         else: 
             Fitness = fitnessSine(Individual)
-        # Add the individual and its value to the dict
-        Selected[Individual] = Fitness
-    # Sort the dictionary to its values
-    SelectedSorted = sorted(Selected.items(), key=lambda x: x[1], reverse=True)
-    #Save the top X parents
+        # Add the individual and its value as a tuple to the list
+        Selected.append((Individual, Fitness))
+    # Sort the list by the fitness values
+    SelectedSorted = sorted(Selected, key=lambda x: x[1], reverse=True)
+    # Save the top X parents
     Parents = [item[0] for item in SelectedSorted[:AmountOfParents]]
     return Parents, SelectedSorted
 
@@ -113,8 +115,32 @@ def Match(Pop):
 def Compete(Pop):
     return[]
 
+def FitnessSelection(Pop, Children, UseLinReg, PopSize):
+    # get the fitness of the children
+    FitnessChildren = []
+    for Child in Children:
+        if UseLinReg:
+            Fitness = fitnessML(Child)
+        else: 
+            Fitness = fitnessSine(Child)
+        #Add the individual and its value to the dict
+        FitnessChildren.append((Child, Fitness))
+    # add the dicts together
+    TotalFitness = Pop + FitnessChildren
+    # sort them by fitness
+    SortedTotalFitness = sorted(TotalFitness, key=lambda x: x[1], reverse=True)
+    # get the top amount of population
+    NewPop = SortedTotalFitness[:PopSize]
+    return NewPop
+
 def SaveResults(Pop):
-    return[]
+    Values = Pop
+    HighestValue = Values[0][1]
+    total = 0
+    for Value in Values:
+        total += Value[1]
+    AverageValue = total / len(Values)
+    return [HighestValue, AverageValue]
 
 def fitnessML(regressor: LinReg, data:pd.DataFrame, bitstring:str):
     X = regressor.get_columns(data.values, bitstring)
@@ -123,3 +149,24 @@ def fitnessML(regressor: LinReg, data:pd.DataFrame, bitstring:str):
 def fitnessSine(bitstring):
     bit_value = int(bitstring, 2) / (2 ** len(bitstring) - 1)
     return np.sin(bit_value *128)
+
+def CreateGraph(data):
+    # Extract the values for each column (Array 1, Array 2, Array 3)
+    array1_values = [sublist[0] for sublist in data]
+    array2_values = [sublist[1] for sublist in data]
+
+    # Create a list of indices (x-values) to use as the x-axis
+    indices = range(len(data))
+
+    # Create a single graph for all points
+    plt.figure(figsize=(10, 6))
+    plt.plot(indices, array1_values, label='Higest')
+    plt.plot(indices, array2_values, label='Average')
+
+    plt.title('All Arrays')
+    plt.xlabel('Generations')
+    plt.ylabel('Values')
+    plt.legend()
+
+    plt.tight_layout()
+    plt.show()

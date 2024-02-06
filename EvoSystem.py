@@ -1,9 +1,15 @@
+import numpy as np
+import pandas as pd
 import random
 
+from LinReg import LinReg
 
 def StartSim(AmountOfGen, Seed, UseLinReg, UseCrowding, BitstringLength, MutationRate, CrossoverRate, PopSize, AmountOfParents):
     Pop = InitPop(BitstringLength, PopSize)
     Results = []
+    regressor = LinReg()
+    data = pd.read_csv("dataset.txt", header=None)
+
     for _ in range(AmountOfGen):
         #get the top X amount of parents
         Parents, PopFitness = Selection(Pop, UseLinReg, AmountOfParents)
@@ -73,7 +79,10 @@ def Compete(Pop):
 def SaveResults(Pop):
     return[]
 
+def fitnesML(regressor: LinReg, data:pd.DataFrame, bitstring:str):
+    X = regressor.get_columns(data.values, bitstring)
+    return regressor.get_fitness(X[:,:-1], X[:,-1])
+#%%
+def fitnesIntValue(bitstring):
+    return int(bitstring, 2) / (2 ** len(bitstring) - 1)
 
-
-
-    ## mycomment

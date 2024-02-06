@@ -3,6 +3,7 @@ import pandas as pd
 import math
 import random
 import matplotlib.pyplot as plt
+from matplotlib.animation import FuncAnimation
 
 from LinReg import LinReg
 
@@ -12,6 +13,7 @@ def StartSim(AmountOfGen, Seed, UseLinReg, UseCrowding, UseReplacementSelection,
     Results = []
     regressor = LinReg()
     data = pd.read_csv("Data/Data.txt", header=None)
+    PopEachGeneration = []
 
     for _ in range(AmountOfGen):
         #get the top X amount of parents
@@ -28,10 +30,12 @@ def StartSim(AmountOfGen, Seed, UseLinReg, UseCrowding, UseReplacementSelection,
         elif UseFitnessSelection: #survivor selection 1 Add x children to existing pop, select top fitness
             NewPop = FitnessSelection(PopFitness, ChildrenM, UseLinReg, PopSize)
         elif UseReplacementSelection: #survivor selection 2 Replace bot X of population with the new children
-            pass
+            NewPop = ReplacementSelection(PopFitness, ChildrenM, UseLinReg)
 
         Results.append(SaveResults(NewPop))
-    CreateGraph(Results) 
+        PopEachGeneration.append(NewPop)
+    # CreateGraph(Results) 
+    CreateSineGraph(PopEachGeneration)
     return
 
 

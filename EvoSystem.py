@@ -30,7 +30,7 @@ def StartSim(AmountOfGen, Seed, UseLinReg, UseCrowding, UseReplacementSelection,
                 selected_individuals = RandomMatch(PopFitness, ChildrenM)
                 NewPop = DeJongsCompete(PopFitness, selected_individuals)
             elif UseCrowding == 2: # Deterministic crowding
-                NewPop = DeterministicCrowding(ChildParentCombosM, UseLinReg, PopSize, regressor, data, Seed, Constraint)
+                NewPop = DeterministicCrowding(PopFitness, ChildParentCombosM, UseLinReg, PopSize, regressor, data, Seed, Constraint)
 
         #survivor selection 1 Add x children to existing pop, select top fitness
         elif UseFitnessSelection: 

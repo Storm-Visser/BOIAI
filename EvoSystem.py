@@ -163,6 +163,68 @@ def fitnessSine(bitstring):
     bit_value = int(bitstring, 2) / (2 ** len(bitstring) - 1)
     return np.sin(bit_value *128)
 
+def CreateSineGraph(generationData):
+
+    fig, ax = plt.subplots()
+    line, = ax.plot([], [], color='blue', marker='o', linestyle='', markersize=3, label='Individuals')
+    sine_line, = ax.plot([], [], color='red', linewidth=0.5, alpha=0.5, label='Sine Function')
+    ax.set_xlabel('Individuals')
+    ax.set_ylabel('Fitness')
+    ax.set_title('Population Fitness and Sine Function')
+    ax.set_xlim(0, 128)
+    ax.set_ylim(-1, 1)
+    # ax.legend()
+
+    # x_values = []
+    # fitness_values = []
+    # for generation in generationData:
+        
+    #     x_values = [int(x, 2) / (2 ** len(x) - 1) for x, y in generation]
+    #     fitness_values = [y for x, y in generation]
+
+    # def update(frame):
+    #     line.set_data(x_values, fitness_values)
+    #     return
+
+
+    # Generate the initial population of individuals
+    # population_size = 100
+    # bitstrings = np.random.randint(0, 2, size=(population_size, 10))  # Assuming each individual has a bitstring of length 10
+
+
+    # Function to update the plot with each frame (generation)
+    def update(frame):
+        # Compute the fitness of each individual using the sine function
+        # x_values = np.arange(population_size)  # Use indices of individuals as x values
+        # fitness_values = np.sin(np.sum(bitstrings, axis=1))  # Compute fitness based on the sum of bits in each bitstring
+
+        x_values = [(int(x, 2) / (2 ** len(x) - 1)) * 128 for x, y in generationData[frame]]
+        fitness_values = [y for x, y in generationData[frame]]
+
+        print("x_values", x_values)
+        print("fitness_values", fitness_values)
+
+        # Update the data for the individuals scatter plot
+        line.set_data(x_values, fitness_values)
+
+        # Sine function
+        x_sine = np.linspace(0, 128, 1000)
+        y_sine = np.sin(x_sine + frame / 10)
+        sine_line.set_data(x_sine, y_sine)
+
+        return line, sine_line
+
+    lineVal, sine_lineVal = update(0)
+    
+    
+    # Create the animation
+    # ani = FuncAnimation(fig, update, frames=range(len(generationData)), interval=200, blit=True)
+
+    plt.show()
+
+
+
+
 def CreateGraph(data):
     # Extract the values for each column (Array 1, Array 2, Array 3)
     array1_values = [sublist[0] for sublist in data]

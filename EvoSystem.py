@@ -34,7 +34,7 @@ def StartSim(AmountOfGen, Seed, UseLinReg, UseCrowding, UseReplacementSelection,
         Pop = [x[0] for x in NewPop]
         Results.append(SaveResults(NewPop))
         #print(SaveResults(NewPop))
-        PopEachGeneration.append(NewPop)
+        PopEachGeneration.append(Pop)
     # CreateGraph(Results) 
     CreateSineGraph(PopEachGeneration)
     return
@@ -59,7 +59,7 @@ def Selection(Pop, UseLinReg, AmountOfParents, Regressor, Data, Seed):
         if UseLinReg:
             Fitness = fitnessML(Regressor, Data, Individual, Seed)
         else: 
-            Fitness = fitnessSine(Individual)
+            Fitness = errorSine(Individual)
         # Add the individual and its value as a tuple to the list
         Selected.append((Individual, Fitness))
     # Sort the list by the fitness values
@@ -120,7 +120,7 @@ def FitnessSelection(Pop, Children, UseLinReg, PopSize, Regressor, Data, Seed):
         if UseLinReg:
             Fitness = fitnessML(Regressor, Data, Child, Seed)
         else: 
-            Fitness = fitnessSine(Child)
+            Fitness = errorSine(Child)
         #Add the individual and its value to the dict
         FitnessChildren.append((Child, Fitness))
     # add the dicts together
@@ -138,7 +138,7 @@ def ReplacementSelection(Pop, Children, UseLinReg, Regressor, Data, Seed):
         if UseLinReg:
             fitnessVal = fitnessML(Regressor, Data, Child, Seed)
         else: 
-            fitnessVal = fitnessSine(Child)
+            fitnessVal = errorSine(Child)
         childrenToAdd.append((Child, fitnessVal))
         
     Pop[-len(Children):] = childrenToAdd
@@ -164,7 +164,7 @@ def fitnessML(regressor: LinReg, data:pd.DataFrame, bitstring:str, Seed):
     X = regressor.get_columns(data.values, bitstring)
     return regressor.get_fitness(X[:,:-1], X[:,-1], Seed)
 
-def fitnessSine(bitstring):
+def errorSine(bitstring):
     bit_value = int(bitstring, 2) / (2 ** len(bitstring) - 1)
 
     sin_value = np.sin(bit_value * 128)
@@ -173,62 +173,42 @@ def fitnessSine(bitstring):
 
     return error
 
+def fitnessSine(bitstring):
+    bit_value = int(bitstring, 2) / (2 ** len(bitstring) - 1)
+
+    sin_value = np.sin(bit_value * 128)
+
+    return sin_value
+
 def CreateSineGraph(generationData):
 
     fig, ax = plt.subplots()
     line, = ax.plot([], [], color='blue', marker='o', linestyle='', markersize=3, label='Individuals')
     sine_line, = ax.plot([], [], color='red', linewidth=0.5, alpha=0.5, label='Sine Function')
-    ax.set_xlabel('Individuals')
+    ax.set_xlabel('Chromosome value')
     ax.set_ylabel('Fitness')
-    ax.set_title('Population Fitness and Sine Function')
+    title_text = ax.set_title('')
     ax.set_xlim(0, 128)
-    ax.set_ylim(-1, 1)
+    ax.set_ylim(-1.2, 1.2)
     # ax.legend()
 
-    # x_values = []
-    # fitness_values = []
-    # for generation in generationData:
-        
-    #     x_values = [int(x, 2) / (2 ** len(x) - 1) for x, y in generation]
-    #     fitness_values = [y for x, y in generation]
-
-    # def update(frame):
-    #     line.set_data(x_values, fitness_values)
-    #     return
-
-
-    # Generate the initial population of individuals
-    # population_size = 100
-    # bitstrings = np.random.randint(0, 2, size=(population_size, 10))  # Assuming each individual has a bitstring of length 10
-
-
-    # Function to update the plot with each frame (generation)
     def update(frame):
-        # Compute the fitness of each individual using the sine function
-        # x_values = np.arange(population_size)  # Use indices of individuals as x values
-        # fitness_values = np.sin(np.sum(bitstrings, axis=1))  # Compute fitness based on the sum of bits in each bitstring
-
-        x_values = [(int(x, 2) / (2 ** len(x) - 1)) * 128 for x, y in generationData[frame]]
-        fitness_values = [y for x, y in generationData[frame]]
-
-        print("x_values", x_values)
-        print("fitness_values", fitness_values)
-
-        # Update the data for the individuals scatter plot
+        x_values = [(int(x, 2) / (2 ** len(x) - 1)) * 128 for x in generationData[frame]]
+        fitness_values = [fitnessSine(x) for x in generationData[frame]]
         line.set_data(x_values, fitness_values)
 
-        # Sine function
+        # print("x_values", x_values)
+        # print("fitness_values", fitness_values)
+
         x_sine = np.linspace(0, 128, 1000)
-        y_sine = np.sin(x_sine + frame / 10)
+        y_sine = np.sin(x_sine + len(generationData))
         sine_line.set_data(x_sine, y_sine)
 
-        return line, sine_line
+        title_text.set_text(f'Generation: {frame}')
 
-    lineVal, sine_lineVal = update(0)
-    
-    
-    # Create the animation
-    # ani = FuncAnimation(fig, update, frames=range(len(generationData)), interval=200, blit=True)
+        return line, sine_line, title_text
+
+    ani = FuncAnimation(fig, update, frames=range(len(generationData)), interval=1000, blit=False)
 
     plt.show()
 

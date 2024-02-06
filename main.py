@@ -3,7 +3,7 @@ import EvoSystem
 EvoSystem.StartSim(
     AmountOfGen = 100,
     Seed = 0,
-    UseLinReg = 1, # True for LinReg false for Sine
+    UseLinReg = 0, # True for LinReg false for Sine
     UseCrowding = 0,
     UseReplacementSelection = 0,
     UseFitnessSelection = 1,

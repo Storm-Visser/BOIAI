@@ -35,7 +35,7 @@ def StartSim(AmountOfGen, Seed, UseLinReg, UseCrowding, UseReplacementSelection,
         Results.append(SaveResults(NewPop))
         #print(SaveResults(NewPop))
         PopEachGeneration.append(Pop)
-    # CreateGraph(Results) 
+    #CreateGraph(Results) 
     CreateSineGraph(PopEachGeneration)
     return
 
@@ -165,18 +165,26 @@ def fitnessML(regressor: LinReg, data:pd.DataFrame, bitstring:str, Seed):
     return regressor.get_fitness(X[:,:-1], X[:,-1], Seed)
 
 def errorSine(bitstring):
-    bit_value = int(bitstring, 2) / (2 ** len(bitstring) - 1)
-
-    sin_value = np.sin(bit_value * 128)
+    sin_value = fitnessSine(bitstring)
 
     error = (2 - (sin_value + 1))/2
 
     return error
 
-def fitnessSine(bitstring):
+def fitnessSine(bitstring, constraint=[50, 60]):
     bit_value = int(bitstring, 2) / (2 ** len(bitstring) - 1)
 
-    sin_value = np.sin(bit_value * 128)
+    x_value = bit_value * 128
+
+    if x_value < constraint[0]:
+        distance = constraint[0] - x_value
+    elif x_value > constraint[1]:
+        distance = x_value - constraint[1]
+    else:
+        distance = 0
+
+    sin_value = np.sin(x_value)
+    sin_value -= 0.1 * distance
 
     return sin_value
 
@@ -189,7 +197,7 @@ def CreateSineGraph(generationData):
     ax.set_ylabel('Fitness')
     title_text = ax.set_title('')
     ax.set_xlim(0, 128)
-    ax.set_ylim(-1.2, 1.2)
+    ax.set_ylim(-5.2, 1.2)
     # ax.legend()
 
     def update(frame):

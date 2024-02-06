@@ -5,7 +5,7 @@ import random
 
 from LinReg import LinReg
 
-def StartSim(AmountOfGen, Seed, UseLinReg, UseCrowding, BitstringLength, MutationRate, CrossoverRate, PopSize, AmountOfParents):
+def StartSim(AmountOfGen, Seed, UseLinReg, UseCrowding, UseReplacementSelection, UseFitnessSelection, BitstringLength, MutationRate, CrossoverRate, PopSize, AmountOfParents):
     Pop = InitPop(BitstringLength, PopSize)
     # print(Pop)
     Results = []
@@ -19,16 +19,17 @@ def StartSim(AmountOfGen, Seed, UseLinReg, UseCrowding, BitstringLength, Mutatio
         Children = Crossover(Parents, CrossoverRate)
         # mutate some of the children
         ChildrenM = Mutate(Children, MutationRate)
-        #survivor selection 1 Add x children to existing pop, select top fitness
-            
-        #survivor selection 2 Replace bot X of population with the new children
-
-        #survivor selection 3 Crowding stuff 
-        if UseCrowding:
+        # select survivors for next gen
+        NewPop = PopFitness
+        if UseCrowding: #survivor selection 3 Crowding stuff
             Match(ChildrenM)
             Compete(ChildrenM)
-            
-        Results.append(SaveResults(Pop))
+        elif UseFitnessSelection: #survivor selection 1 Add x children to existing pop, select top fitness
+            pass
+        elif UseReplacementSelection: #survivor selection 2 Replace bot X of population with the new children
+            pass
+
+        Results.append(SaveResults(NewPop))
     return
 
 
@@ -50,9 +51,9 @@ def Selection(Pop, UseLinReg, AmountOfParents):
     Selected = dict()
     for Individual in Pop:
         if UseLinReg:
-            Fitness = fitnesML(Individual)
+            Fitness = fitnessML(Individual)
         else: 
-            Fitness = fitnesIntValue(Individual)
+            Fitness = fitnessSine(Individual)
         # Add the individual and its value to the dict
         Selected[Individual] = Fitness
     # Sort the dictionary to its values

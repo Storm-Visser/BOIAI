@@ -1,12 +1,12 @@
 import EvoSystem
 
 EvoSystem.StartSim(
-    AmountOfGen = 20,
+    AmountOfGen = 30,
     Seed = 10,
     UseLinReg = 0, # True for LinReg false for Sine
-    UseCrowding = 0,
-    UseReplacementSelection = 1,
-    UseFitnessSelection = 1,
+    UseCrowding = 1, #1: De Jong's Scheme, 2: 2nd scheme
+    UseReplacementSelection = 0,
+    UseFitnessSelection = 0,
     BitstringLength = 10, #101 for LinReg
     MutationRate = 0.5,
     CrossoverRate = 0.7,

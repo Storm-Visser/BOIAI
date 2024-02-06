@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 import math
 import random
+import sys
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 from LinReg import LinReg
@@ -23,9 +24,13 @@ def StartSim(AmountOfGen, Seed, UseLinReg, UseCrowding, UseReplacementSelection,
         ChildrenM = Mutate(Children, MutationRate)
         # select survivors for next gen
         NewPop = PopFitness
-        if UseCrowding: #survivor selection 3 Crowding stuff
-            Match(ChildrenM)
-            Compete(ChildrenM)
+        if UseCrowding != 0: #survivor selection 3 Crowding stuff
+            if UseCrowding == 1: # De Jong's scheme
+                selected_individuals = RandomMatch(PopFitness, ChildrenM)
+                NewPop = DeJongsCompete(PopFitness, selected_individuals)
+            elif UseCrowding == 2:
+                RandomMatch(ChildrenM)
+                Compete(ChildrenM)
         elif UseFitnessSelection: #survivor selection 1 Add x children to existing pop, select top fitness
             NewPop = FitnessSelection(PopFitness, ChildrenM, UseLinReg, PopSize, regressor, data, Seed, Constraint)
         elif UseReplacementSelection: #survivor selection 2 Replace bot X of population with the new children
@@ -143,8 +148,44 @@ def ReplacementSelection(Pop, Children, UseLinReg, Regressor, Data, Seed, Constr
     Pop[-len(Children):] = childrenToAdd
     return Pop
 
-def Match(Pop):
-    return[]
+def DeJongsCompete(Pop, selected_individuals):
+
+    for pair in selected_individuals:
+        winner = [None, -(sys.maxsize - 1)]
+        loser = [None, -(sys.maxsize - 1)]
+        for Individual in pair:
+            Individual_bitValue = scaledBitValue(Individual) / 128.0
+            Cumulative_distance = 0.0
+            for Neighbor in Pop:
+                Neighbor_bitValue = scaledBitValue(Neighbor[0]) / 128.0
+                Cumulative_distance += abs(Neighbor_bitValue - Individual_bitValue)
+            
+            Individual_fitness = errorSine(Individual, Constraint=None)
+            Individual_fitness -= Cumulative_distance / len(Pop)
+
+            if Individual_fitness > winner[1]:
+                loser = winner
+                winner = [Individual, Individual_fitness]
+            else:
+                loser = [Individual, Individual_fitness]
+
+        if pair == (loser[0], winner[0]): #i.e. parent lost
+            loser = [x for x in Pop if x[0] == loser[0]][0]
+            winner = (winner[0], errorSine(winner[0], Constraint=None))
+            Pop.remove(loser)
+            Pop.append(winner)
+   
+    return Pop
+        
+def RandomMatch(Pop, Children):
+    # Matches every child to a random individual in the population
+    # Returns a list of [Parent, Child]
+    selected_pairs = []
+    Pop = [x[0] for x in Pop]
+    selected_individuals = np.random.choice(Pop, size=len(Children), replace=False)
+    for i, Child in enumerate(Children):
+        selected_pairs.append((selected_individuals[i], Child))
+    return selected_pairs
 
 def Compete(Pop):
     return[]
@@ -172,11 +213,11 @@ def errorSine(bitstring, Constraint):
     return error
 
 def fitnessSine(bitstring, constraint):
-    bit_value = int(bitstring, 2) / (2 ** len(bitstring) - 1)
+    x_value = scaledBitValue(bitstring)
 
-    x_value = bit_value * 128
-
-    if x_value < constraint[0]:
+    if constraint == None:
+        distance = 0
+    elif x_value < constraint[0]:
         distance = constraint[0] - x_value
     elif x_value > constraint[1]:
         distance = x_value - constraint[1]
@@ -187,6 +228,11 @@ def fitnessSine(bitstring, constraint):
     sin_value -= 0.05 * distance
 
     return sin_value
+
+def scaledBitValue(bitstring):
+    bit_value = int(bitstring, 2) / (2 ** len(bitstring) - 1)
+
+    return bit_value * 128
 
 def CreateSineGraph(generationData, Constraint):
 
@@ -216,7 +262,7 @@ def CreateSineGraph(generationData, Constraint):
 
         return line, sine_line, title_text
 
-    ani = FuncAnimation(fig, update, frames=range(len(generationData)), interval=1000, blit=False)
+    ani = FuncAnimation(fig, update, frames=range(len(generationData)), interval=500, blit=False)
 
     plt.show()
 

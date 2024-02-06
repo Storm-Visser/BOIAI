@@ -1,15 +1,15 @@
 import EvoSystem
 
 EvoSystem.StartSim(
-    AmountOfGen = 100,
-    Seed = 0,
-    UseLinReg = 0, # True for LinReg false for Sine
+    AmountOfGen = 20,
+    Seed = 10,
+    UseLinReg = 1, # True for LinReg false for Sine
     UseCrowding = 0,
-    UseReplacementSelection = 0,
+    UseReplacementSelection = 1,
     UseFitnessSelection = 1,
-    BitstringLength = 91,
-    MutationRate = 1,
-    CrossoverRate = 0.8,
+    BitstringLength = 101, #101 for LinReg
+    MutationRate = 0.5,
+    CrossoverRate = 0.7,
     PopSize = 100,
     AmountOfParents = 10
 )

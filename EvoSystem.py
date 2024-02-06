@@ -4,7 +4,6 @@ import math
 import random
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
-
 from LinReg import LinReg
 
 def StartSim(AmountOfGen, Seed, UseLinReg, UseCrowding, UseReplacementSelection, UseFitnessSelection, BitstringLength, MutationRate, CrossoverRate, PopSize, AmountOfParents):
@@ -160,8 +159,9 @@ def SaveResults(Pop):
     AverageValue = total / len(Values)
     return [HighestValue, AverageValue]
 
-def fitnessML(regressor: LinReg, data:pd.DataFrame, bitstring:str, Seed):
-    X = regressor.get_columns(data.values, bitstring)
+def fitnessML(regressor: LinReg, data:pd.DataFrame, bitstring, Seed):
+    BitArray = np.fromstring(bitstring,'u1') - ord('0')
+    X = regressor.get_columns(data.values, BitArray )
     return regressor.get_fitness(X[:,:-1], X[:,-1], Seed)
 
 def errorSine(bitstring):
@@ -219,9 +219,6 @@ def CreateSineGraph(generationData):
     ani = FuncAnimation(fig, update, frames=range(len(generationData)), interval=1000, blit=False)
 
     plt.show()
-
-
-
 
 def CreateGraph(data):
     # Extract the values for each column (Array 1, Array 2, Array 3)

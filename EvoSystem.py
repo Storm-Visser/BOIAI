@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 from LinReg import LinReg
 
-def StartSim(AmountOfGen, Seed, UseLinReg, UseCrowding, UseReplacementSelection, UseFitnessSelection, BitstringLength, MutationRate, CrossoverRate, PopSize, AmountOfParents):
+def StartSim(AmountOfGen, Seed, UseLinReg, UseCrowding, UseReplacementSelection, UseFitnessSelection, BitstringLength, MutationRate, CrossoverRate, PopSize, AmountOfParents, Constraint):
     Pop = InitPop(BitstringLength, PopSize)
     # print(Pop)
     Results = []
@@ -16,7 +16,7 @@ def StartSim(AmountOfGen, Seed, UseLinReg, UseCrowding, UseReplacementSelection,
 
     for _ in range(AmountOfGen):
         #get the top X amount of parents
-        Parents, PopFitness = Selection(Pop, UseLinReg, AmountOfParents, regressor, data, Seed)
+        Parents, PopFitness = Selection(Pop, UseLinReg, AmountOfParents, regressor, data, Seed, Constraint)
         # use crossover to create children
         Children = Crossover(Parents, CrossoverRate)
         # mutate some of the children
@@ -27,15 +27,15 @@ def StartSim(AmountOfGen, Seed, UseLinReg, UseCrowding, UseReplacementSelection,
             Match(ChildrenM)
             Compete(ChildrenM)
         elif UseFitnessSelection: #survivor selection 1 Add x children to existing pop, select top fitness
-            NewPop = FitnessSelection(PopFitness, ChildrenM, UseLinReg, PopSize, regressor, data, Seed)
+            NewPop = FitnessSelection(PopFitness, ChildrenM, UseLinReg, PopSize, regressor, data, Seed, Constraint)
         elif UseReplacementSelection: #survivor selection 2 Replace bot X of population with the new children
-            NewPop = ReplacementSelection(PopFitness, ChildrenM, UseLinReg)
+            NewPop = ReplacementSelection(PopFitness, ChildrenM, UseLinReg, PopSize, regressor, data, Seed, Constraint)
         Pop = [x[0] for x in NewPop]
         Results.append(SaveResults(NewPop))
         #print(SaveResults(NewPop))
         PopEachGeneration.append(Pop)
     #CreateGraph(Results) 
-    CreateSineGraph(PopEachGeneration)
+    CreateSineGraph(PopEachGeneration, Constraint)
     return
 
 def InitPop(BitstringLength, PopSize):
@@ -52,13 +52,13 @@ def InitPop(BitstringLength, PopSize):
     # Return the generated population
     return population
 
-def Selection(Pop, UseLinReg, AmountOfParents, Regressor, Data, Seed):
+def Selection(Pop, UseLinReg, AmountOfParents, Regressor, Data, Seed, Constraint):
     Selected = []
     for Individual in Pop:
         if UseLinReg:
             Fitness = fitnessML(Regressor, Data, Individual, Seed)
         else: 
-            Fitness = errorSine(Individual)
+            Fitness = errorSine(Individual, Constraint)
         # Add the individual and its value as a tuple to the list
         Selected.append((Individual, Fitness))
     # Sort the list by the fitness values
@@ -112,14 +112,14 @@ def Mutate(Children, Rate):
         returnChildren.append(newChild)
     return returnChildren
 
-def FitnessSelection(Pop, Children, UseLinReg, PopSize, Regressor, Data, Seed):
+def FitnessSelection(Pop, Children, UseLinReg, PopSize, Regressor, Data, Seed, Constraint):
     # get the fitness of the children
     FitnessChildren = []
     for Child in Children:
         if UseLinReg:
             Fitness = fitnessML(Regressor, Data, Child, Seed)
         else: 
-            Fitness = errorSine(Child)
+            Fitness = errorSine(Child, Constraint)
         #Add the individual and its value to the dict
         FitnessChildren.append((Child, Fitness))
     # add the dicts together
@@ -130,14 +130,14 @@ def FitnessSelection(Pop, Children, UseLinReg, PopSize, Regressor, Data, Seed):
     NewPop = SortedTotalFitness[:PopSize]
     return NewPop
 
-def ReplacementSelection(Pop, Children, UseLinReg, Regressor, Data, Seed):
+def ReplacementSelection(Pop, Children, UseLinReg, Regressor, Data, Seed, Constraint):
     childrenToAdd = []
     fitnessVal = None
     for Child in Children:
         if UseLinReg:
             fitnessVal = fitnessML(Regressor, Data, Child, Seed)
         else: 
-            fitnessVal = errorSine(Child)
+            fitnessVal = errorSine(Child, Constraint)
         childrenToAdd.append((Child, fitnessVal))
         
     Pop[-len(Children):] = childrenToAdd
@@ -164,14 +164,14 @@ def fitnessML(regressor: LinReg, data:pd.DataFrame, bitstring, Seed):
     X = regressor.get_columns(data.values, BitArray )
     return regressor.get_fitness(X[:,:-1], X[:,-1], Seed)
 
-def errorSine(bitstring):
-    sin_value = fitnessSine(bitstring)
+def errorSine(bitstring, Constraint):
+    sin_value = fitnessSine(bitstring, Constraint)
 
     error = (2 - (sin_value + 1))/2
 
     return error
 
-def fitnessSine(bitstring, constraint=[50, 60]):
+def fitnessSine(bitstring, constraint):
     bit_value = int(bitstring, 2) / (2 ** len(bitstring) - 1)
 
     x_value = bit_value * 128
@@ -184,11 +184,11 @@ def fitnessSine(bitstring, constraint=[50, 60]):
         distance = 0
 
     sin_value = np.sin(x_value)
-    sin_value -= 0.1 * distance
+    sin_value -= 0.05 * distance
 
     return sin_value
 
-def CreateSineGraph(generationData):
+def CreateSineGraph(generationData, Constraint):
 
     fig, ax = plt.subplots()
     line, = ax.plot([], [], color='blue', marker='o', linestyle='', markersize=3, label='Individuals')
@@ -202,7 +202,7 @@ def CreateSineGraph(generationData):
 
     def update(frame):
         x_values = [(int(x, 2) / (2 ** len(x) - 1)) * 128 for x in generationData[frame]]
-        fitness_values = [fitnessSine(x) for x in generationData[frame]]
+        fitness_values = [fitnessSine(x, Constraint) for x in generationData[frame]]
         line.set_data(x_values, fitness_values)
 
         # print("x_values", x_values)

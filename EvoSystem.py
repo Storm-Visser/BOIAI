@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 from LinReg import LinReg
 
-def StartSim(AmountOfGen, Seed, UseLinReg, UseCrowding, UseReplacementSelection, UseFitnessSelection, BitstringLength, MutationRate, CrossoverRate, PopSize, AmountOfParents, Constraint):
+def StartSim(AmountOfGen, Seed, UseLinReg, UseCrowding, UseReplacementSelection, UseFitnessSelection, BitstringLength, MutationRate, CrossoverRate, PopSize, AmountOfParents, Constraint, UseDeterministic):
     Pop = InitPop(BitstringLength, PopSize)
     # print(Pop)
     Results = []
@@ -18,14 +18,20 @@ def StartSim(AmountOfGen, Seed, UseLinReg, UseCrowding, UseReplacementSelection,
         #get the top X amount of parents
         Parents, PopFitness = Selection(Pop, UseLinReg, AmountOfParents, regressor, data, Seed, Constraint)
         # use crossover to create children
-        Children = Crossover(Parents, CrossoverRate)
+        Children, ChildParentCombos = Crossover(Parents, CrossoverRate)
         # mutate some of the children
-        ChildrenM = Mutate(Children, MutationRate)
+        ChildrenM, ChildParentCombosM = Mutate(Children, MutationRate, ChildParentCombos)
         # select survivors for next gen
         NewPop = PopFitness
         if UseCrowding: #survivor selection 3 Crowding stuff
+            if UseDeterministic:
+                NewPop = DeterministicCrowding(NewPop, ChildParentCombosM, UseLinReg, regressor, data, Seed, Constraint)
+            else:
+                pass
+            # Still needed?
             Match(ChildrenM)
             Compete(ChildrenM)
+
         elif UseFitnessSelection: #survivor selection 1 Add x children to existing pop, select top fitness
             NewPop = FitnessSelection(PopFitness, ChildrenM, UseLinReg, PopSize, regressor, data, Seed, Constraint)
         elif UseReplacementSelection: #survivor selection 2 Replace bot X of population with the new children
@@ -34,8 +40,9 @@ def StartSim(AmountOfGen, Seed, UseLinReg, UseCrowding, UseReplacementSelection,
         Results.append(SaveResults(NewPop))
         #print(SaveResults(NewPop))
         PopEachGeneration.append(Pop)
-    #CreateGraph(Results) 
-    CreateSineGraph(PopEachGeneration, Constraint)
+    if not UseLinReg :
+        CreateSineGraph(PopEachGeneration, Constraint)
+    CreateGraph(Results) 
     return
 
 def InitPop(BitstringLength, PopSize):
@@ -69,6 +76,7 @@ def Selection(Pop, UseLinReg, AmountOfParents, Regressor, Data, Seed, Constraint
 
 def Crossover(Parents, Rate):
     Children = []
+    ChildrenParentCombo = []
     checkedParents = Parents.copy()
     for Parent in Parents:
         # break when enough children are found
@@ -96,21 +104,30 @@ def Crossover(Parents, Rate):
             Child2 = OtherParent
 
         Children.extend([Child1, Child2])
+        ChildrenParentCombo.extend([[Child1,Parent],[Child2, OtherParent]])
+    return Children, ChildrenParentCombo
 
-    return Children
-
-def Mutate(Children, Rate):
+def Mutate(Children, Rate, ChildParentCombos):
     if len(Children) <= 0: raise Exception("Children array empty")
     returnChildren = []
+    ChildParentCombosM = ChildParentCombos.copy()
     for Child in Children:
         newChild = Child
         if random.random() < Rate:
+            # get a random place to mutate
             i = random.randint(0, len(Child) - 1)
+            # Explode the child
             newChild = [*Child]
+            # mutate part of the child
             newChild[i] = str((int(Child[i]) + 1) % 2)
+            # Glue the child back together
             newChild = "".join(newChild)
+        # add the new child
         returnChildren.append(newChild)
-    return returnChildren
+        for Combo in ChildParentCombosM:
+            if Combo[0] == Child:
+                Combo[0] = newChild
+    return returnChildren, ChildParentCombosM
 
 def FitnessSelection(Pop, Children, UseLinReg, PopSize, Regressor, Data, Seed, Constraint):
     # get the fitness of the children
@@ -143,6 +160,33 @@ def ReplacementSelection(Pop, Children, UseLinReg, Regressor, Data, Seed, Constr
     Pop[-len(Children):] = childrenToAdd
     return Pop
 
+def DeterministicCrowding(Pop, ParentChildrenCombosM, UseLinReg, Regressor, Data, Seed, Constraint):
+    NewPop = Pop.copy()
+    # print(NewPop)
+    for Combo in ParentChildrenCombosM:
+        # Get the fitness of the parent and the child
+        if UseLinReg:
+            FitC = fitnessML(Regressor, Data, Combo[0], Seed)
+            FitP = fitnessML(Regressor, Data, Combo[1], Seed)
+        else: 
+            FitC = errorSine(Combo[0], Constraint)
+            FitP = errorSine(Combo[1], Constraint)
+        # get probability of replacement, logic reversed bc minimization
+        ProbabilityOfReplacement = 0.5
+        if FitC < FitP:
+            ProbabilityOfReplacement = 1.0
+        elif FitC == FitP:
+            ProbabilityOfReplacement = 0.5
+        elif FitC > FitP :
+            ProbabilityOfReplacement = 0.0
+        # replace the parent with the child
+        if random.random() < ProbabilityOfReplacement:
+            # remove parent
+            NewPop.remove((Combo[1], FitP))
+            # Add child
+            NewPop.append((Combo[0], FitC))
+    return NewPop
+
 def Match(Pop):
     return[]
 
@@ -160,8 +204,11 @@ def SaveResults(Pop):
     return [HighestValue, AverageValue]
 
 def fitnessML(regressor: LinReg, data:pd.DataFrame, bitstring, Seed):
+    # Create bitarray from bitstring
     BitArray = np.fromstring(bitstring,'u1') - ord('0')
-    X = regressor.get_columns(data.values, BitArray )
+    # Get the data corrosponding to the BitArray
+    X = regressor.get_columns(data.values, BitArray)
+    # Return the fitness
     return regressor.get_fitness(X[:,:-1], X[:,-1], Seed)
 
 def errorSine(bitstring, Constraint):
@@ -216,7 +263,7 @@ def CreateSineGraph(generationData, Constraint):
 
         return line, sine_line, title_text
 
-    ani = FuncAnimation(fig, update, frames=range(len(generationData)), interval=1000, blit=False)
+    ani = FuncAnimation(fig, update, frames=range(len(generationData)), interval=100, blit=False)
 
     plt.show()
 

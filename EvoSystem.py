@@ -68,7 +68,17 @@ def Crossover(Pop, Rate):
     return[]
 
 def Mutate(Children, Rate):
-    return[]
+    if len(Children) <= 0: raise Exception("Children array empty")
+    returnChildren = []
+    for Child in Children:
+        newChild = Child
+        if random.random() < Rate:
+            i = random.randint(0, len(Child) - 1)
+            newChild = [*Child]
+            newChild[i] = str((int(Child[i]) + 1) % 2)
+            newChild = "".join(newChild)
+        returnChildren.append(newChild)
+    return returnChildren
 
 def Match(Pop):
     return[]

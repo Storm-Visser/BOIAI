@@ -107,6 +107,19 @@ def Mutate(Children, Rate):
         returnChildren.append(newChild)
     return returnChildren
 
+def ReplacementSelection(Pop:list, Children, UseLinReg):
+    childrenToAdd = []
+    fitnessVal = None
+    for Child in Children:
+        if UseLinReg:
+            fitnessVal = fitnessML(Child) #TODO: !!!
+        else: 
+            fitnessVal = fitnessSine(Child)
+        childrenToAdd.append((Child, fitnessVal))
+        
+    Pop[-len(Children):] = childrenToAdd
+    return Pop
+
 def Match(Pop):
     return[]
 

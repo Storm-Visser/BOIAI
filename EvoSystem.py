@@ -15,7 +15,7 @@ def StartSim(AmountOfGen, Seed, UseLinReg, UseCrowding, UseReplacementSelection,
 
     for _ in range(AmountOfGen):
         #get the top X amount of parents
-        Parents, PopFitness = Selection(Pop, UseLinReg, AmountOfParents)
+        Parents, PopFitness = Selection(Pop, UseLinReg, AmountOfParents, regressor, data, Seed)
         # use crossover to create children
         Children = Crossover(Parents, CrossoverRate)
         # mutate some of the children
@@ -26,14 +26,14 @@ def StartSim(AmountOfGen, Seed, UseLinReg, UseCrowding, UseReplacementSelection,
             Match(ChildrenM)
             Compete(ChildrenM)
         elif UseFitnessSelection: #survivor selection 1 Add x children to existing pop, select top fitness
-            NewPop = FitnessSelection(PopFitness, ChildrenM, UseLinReg, PopSize)
+            NewPop = FitnessSelection(PopFitness, ChildrenM, UseLinReg, PopSize, regressor, data, Seed)
         elif UseReplacementSelection: #survivor selection 2 Replace bot X of population with the new children
             pass
-
+        Pop = [x[0] for x in NewPop]
         Results.append(SaveResults(NewPop))
+        print(SaveResults(NewPop))
     CreateGraph(Results) 
     return
-
 
 def InitPop(BitstringLength, PopSize):
     # Initialize an empty list to hold the population of bitstrings
@@ -49,36 +49,36 @@ def InitPop(BitstringLength, PopSize):
     # Return the generated population
     return population
 
-def Selection(Pop, UseLinReg, AmountOfParents):
+def Selection(Pop, UseLinReg, AmountOfParents, Regressor, Data, Seed):
     Selected = []
     for Individual in Pop:
         if UseLinReg:
-            Fitness = fitnessML(Individual)
+            Fitness = fitnessML(Regressor, Data, Individual, Seed)
         else: 
             Fitness = fitnessSine(Individual)
         # Add the individual and its value as a tuple to the list
         Selected.append((Individual, Fitness))
     # Sort the list by the fitness values
-    SelectedSorted = sorted(Selected, key=lambda x: x[1], reverse=True)
+    SelectedSorted = sorted(Selected, key=lambda x: x[1], reverse=False)
     # Save the top X parents
     Parents = [item[0] for item in SelectedSorted[:AmountOfParents]]
     return Parents, SelectedSorted
 
 def Crossover(Parents, Rate):
     Children = []
-    checkedParents = []
+    checkedParents = Parents.copy()
     for Parent in Parents:
-        # break when 10 children are found
+        # break when enough children are found
         if len(Children) >= len(Parents): break
         # dont add parents that were already used
-        if Parent in checkedParents:
+        if Parent not in checkedParents:
             continue
         # update the used parents
-        checkedParents.append(Parent)
+        checkedParents.remove(Parent)
         # Randomly select another parent that hassnt been used for crossover
-        OtherParent = random.choice([x for x in Parents if x not in checkedParents])
+        OtherParent = random.choice([x for x in Parents if x in checkedParents])
         # update the used parent
-        checkedParents.append(OtherParent)
+        checkedParents.remove(OtherParent)
         # Check if crossover should occur based on the rate
         if random.random() < Rate:
             # Randomly select a crossover point
@@ -109,12 +109,30 @@ def Mutate(Children, Rate):
         returnChildren.append(newChild)
     return returnChildren
 
-def ReplacementSelection(Pop:list, Children, UseLinReg):
+def FitnessSelection(Pop, Children, UseLinReg, PopSize, Regressor, Data, Seed):
+    # get the fitness of the children
+    FitnessChildren = []
+    for Child in Children:
+        if UseLinReg:
+            Fitness = fitnessML(Regressor, Data, Child, Seed)
+        else: 
+            Fitness = fitnessSine(Child)
+        #Add the individual and its value to the dict
+        FitnessChildren.append((Child, Fitness))
+    # add the dicts together
+    TotalFitness = Pop + FitnessChildren
+    # sort them by fitness
+    SortedTotalFitness = sorted(TotalFitness, key=lambda x: x[1], reverse=False)
+    # get the top amount of population
+    NewPop = SortedTotalFitness[:PopSize]
+    return NewPop
+
+def ReplacementSelection(Pop, Children, UseLinReg, Regressor, Data, Seed):
     childrenToAdd = []
     fitnessVal = None
     for Child in Children:
         if UseLinReg:
-            fitnessVal = fitnessML(Child) #TODO: !!!
+            fitnessVal = fitnessML(Regressor, Data, Child, Seed)
         else: 
             fitnessVal = fitnessSine(Child)
         childrenToAdd.append((Child, fitnessVal))
@@ -128,23 +146,6 @@ def Match(Pop):
 def Compete(Pop):
     return[]
 
-def FitnessSelection(Pop, Children, UseLinReg, PopSize):
-    # get the fitness of the children
-    FitnessChildren = []
-    for Child in Children:
-        if UseLinReg:
-            Fitness = fitnessML(Child)
-        else: 
-            Fitness = fitnessSine(Child)
-        #Add the individual and its value to the dict
-        FitnessChildren.append((Child, Fitness))
-    # add the dicts together
-    TotalFitness = Pop + FitnessChildren
-    # sort them by fitness
-    SortedTotalFitness = sorted(TotalFitness, key=lambda x: x[1], reverse=True)
-    # get the top amount of population
-    NewPop = SortedTotalFitness[:PopSize]
-    return NewPop
 
 def SaveResults(Pop):
     Values = Pop
@@ -155,13 +156,18 @@ def SaveResults(Pop):
     AverageValue = total / len(Values)
     return [HighestValue, AverageValue]
 
-def fitnessML(regressor: LinReg, data:pd.DataFrame, bitstring:str):
+def fitnessML(regressor: LinReg, data:pd.DataFrame, bitstring:str, Seed):
     X = regressor.get_columns(data.values, bitstring)
-    return regressor.get_fitness(X[:,:-1], X[:,-1])
+    return regressor.get_fitness(X[:,:-1], X[:,-1], Seed)
 
 def fitnessSine(bitstring):
     bit_value = int(bitstring, 2) / (2 ** len(bitstring) - 1)
-    return np.sin(bit_value *128)
+
+    sin_value = np.sin(bit_value * 128)
+
+    error = (2 - (sin_value + 1))/2
+
+    return error
 
 def CreateGraph(data):
     # Extract the values for each column (Array 1, Array 2, Array 3)

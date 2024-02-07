@@ -28,9 +28,9 @@ def StartSim(AmountOfGen, Seed, UseLinReg, UseCrowding, UseReplacementSelection,
         if UseCrowding != 0: 
             if UseCrowding == 1: # De Jong's scheme
                 selected_individuals = RandomMatch(PopFitness, ChildrenM)
-                NewPop = DeJongsCompete(PopFitness, selected_individuals)
+                NewPop = DeJongsCompete(PopFitness, selected_individuals, UseLinReg, regressor, data, Seed, Constraint)
             elif UseCrowding == 2: # Deterministic crowding
-                NewPop = DeterministicCrowding(PopFitness, ChildParentCombosM, UseLinReg, PopSize, regressor, data, Seed, Constraint)
+                NewPop = DeterministicCrowding(PopFitness, ChildParentCombosM, UseLinReg, regressor, data, Seed, Constraint)
 
         #survivor selection 1 Add x children to existing pop, select top fitness
         elif UseFitnessSelection: 
@@ -192,13 +192,11 @@ def DeterministicCrowding(Pop, ParentChildrenCombosM, UseLinReg, Regressor, Data
             NewPop.append((Combo[0], FitC))
     return NewPop
 
-def Match(Pop):
-    return[]
-def DeJongsCompete(Pop, selected_individuals):
+def DeJongsCompete(Pop, selected_individuals, UseLinReg, Regressor, Data, Seed, Constraint):
 
     for pair in selected_individuals:
-        winner = [None, -(sys.maxsize - 1)]
-        loser = [None, -(sys.maxsize - 1)]
+        winner = [None, (sys.maxsize - 1)]
+        loser = [None, (sys.maxsize - 1)]
         for Individual in pair:
             Individual_bitValue = scaledBitValue(Individual) / 128.0
             Cumulative_distance = 0.0
@@ -206,10 +204,14 @@ def DeJongsCompete(Pop, selected_individuals):
                 Neighbor_bitValue = scaledBitValue(Neighbor[0]) / 128.0
                 Cumulative_distance += abs(Neighbor_bitValue - Individual_bitValue)
             
-            Individual_fitness = errorSine(Individual, Constraint=None)
+            Individual_fitness = 0
+            if UseLinReg:
+                Individual_fitness = fitnessML(Regressor, Data, Individual, Seed)
+            else: 
+                Individual_fitness = errorSine(Individual, Constraint)
             Individual_fitness -= Cumulative_distance / len(Pop)
 
-            if Individual_fitness > winner[1]:
+            if Individual_fitness < winner[1]:
                 loser = winner
                 winner = [Individual, Individual_fitness]
             else:
@@ -217,7 +219,12 @@ def DeJongsCompete(Pop, selected_individuals):
 
         if pair == (loser[0], winner[0]): #i.e. parent lost
             loser = [x for x in Pop if x[0] == loser[0]][0]
-            winner = (winner[0], errorSine(winner[0], Constraint=None))
+            winner_fitness = 0 
+            if UseLinReg:
+                winner_fitness = fitnessML(Regressor, Data, Individual, Seed)
+            else: 
+                winner_fitness = errorSine(Individual, Constraint)
+            winner = (winner[0], winner_fitness)
             Pop.remove(loser)
             Pop.append(winner)
    
@@ -325,12 +332,12 @@ def CreateGraph(data):
 
     # Create a single graph for all points
     plt.figure(figsize=(10, 6))
-    plt.plot(indices, array1_values, label='Higest')
+    plt.plot(indices, array1_values, label='Best')
     plt.plot(indices, array2_values, label='Average')
 
     plt.title('All Arrays')
     plt.xlabel('Generations')
-    plt.ylabel('Values')
+    plt.ylabel('Error Rate')
     plt.legend()
 
     plt.tight_layout()

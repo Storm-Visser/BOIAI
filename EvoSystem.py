@@ -197,8 +197,12 @@ def DeJongsCompete(Pop, selected_individuals, UseLinReg, Regressor, Data, Seed, 
     for pair in selected_individuals:
         winner = [None, (sys.maxsize - 1)]
         loser = [None, (sys.maxsize - 1)]
+
         for Individual in pair:
+            # Get the value of the bitstring in the range 0-1 (120 comes from the assignment sheet)
             Individual_bitValue = scaledBitValue(Individual) / 128.0
+
+            # Count out the total distance from selected indiviual to all the other neighbors
             Cumulative_distance = 0.0
             for Neighbor in Pop:
                 Neighbor_bitValue = scaledBitValue(Neighbor[0]) / 128.0
@@ -209,16 +213,20 @@ def DeJongsCompete(Pop, selected_individuals, UseLinReg, Regressor, Data, Seed, 
                 Individual_fitness = fitnessML(Regressor, Data, Individual, Seed)
             else: 
                 Individual_fitness = errorSine(Individual, Constraint)
-            Individual_fitness -= Cumulative_distance / len(Pop)
 
+            # Increase the individual's fitness based on the average distance to other individuals
+            Individual_fitness += Cumulative_distance / len(Pop)
+
+            # Store winner and loser of the parent child pair, and swap if needed
             if Individual_fitness < winner[1]:
                 loser = winner
                 winner = [Individual, Individual_fitness]
             else:
                 loser = [Individual, Individual_fitness]
 
+        # Only swap out the parent in the population if the child won the competition
         if pair == (loser[0], winner[0]): #i.e. parent lost
-            loser = [x for x in Pop if x[0] == loser[0]][0]
+            loser = [x for x in Pop if x[0] == loser[0]][0] # find the loser in the population based on the pari bitstring value
             winner_fitness = 0 
             if UseLinReg:
                 winner_fitness = fitnessML(Regressor, Data, Individual, Seed)
@@ -286,8 +294,11 @@ def fitnessSine(bitstring, constraint):
     return sin_value
 
 def scaledBitValue(bitstring):
+    # Converts the bitstring into an int, with base 2
+    # divided by maximum possible value of the bitstring 
     bit_value = int(bitstring, 2) / (2 ** len(bitstring) - 1)
 
+    # Scaled to the 0-128 range specified in the assignment sheet
     return bit_value * 128
 
 def CreateSineGraph(generationData, Constraint):

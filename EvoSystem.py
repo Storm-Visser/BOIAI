@@ -47,6 +47,7 @@ def StartSim(AmountOfGen, Seed, UseLinReg, UseCrowding, UseReplacementSelection,
     # show results
     if not UseLinReg :
         CreateSineGraph(PopEachGeneration, Constraint)
+    CreateVarienceGraph(PopEachGeneration)
     CreateGraph(Results) 
     return
 
@@ -167,7 +168,6 @@ def ReplacementSelection(Pop, Children, UseLinReg, Regressor, Data, Seed, Constr
 
 def DeterministicCrowding(Pop, ParentChildrenCombosM, UseLinReg, Regressor, Data, Seed, Constraint):
     NewPop = Pop.copy()
-    # print(NewPop)
     for Combo in ParentChildrenCombosM:
         # Get the fitness of the parent and the child
         if UseLinReg:
@@ -240,10 +240,6 @@ def RandomMatch(Pop, Children):
         selected_pairs.append((selected_individuals[i], Child))
     return selected_pairs
 
-def Compete(Pop):
-    return[]
-
-
 def SaveResults(Pop):
     Values = Pop
     HighestValue = Values[0][1]
@@ -254,9 +250,10 @@ def SaveResults(Pop):
     return [HighestValue, AverageValue]
 
 def fitnessML(regressor: LinReg, data:pd.DataFrame, bitstring, Seed):
-    # Create bitarray from bitstring
-    BitArray = np.fromstring(bitstring,'u1') - ord('0')
+    # Create bitarray from bitstring, fromsting create 48 for 0 and 49 for 1, so use -ord(0) to substract 48
+    BitArray = np.fromstring(bitstring ,'u1') - ord('0')
     # Get the data corrosponding to the BitArray
+    # print(data)
     X = regressor.get_columns(data.values, BitArray)
     # Return the fitness
     return regressor.get_fitness(X[:,:-1], X[:,-1], Seed)
@@ -338,7 +335,39 @@ def CreateGraph(data):
     plt.title('All Arrays')
     plt.xlabel('Generations')
     plt.ylabel('Error Rate')
+    plt.ylim(bottom=0)
     plt.legend()
 
     plt.tight_layout()
     plt.show()
+
+def CreateVarienceGraph(Pop):
+    VarianceScores = []
+    for generation in Pop:
+        # Assuming generation is a list of strings or a list of lists of bits (0s and 1s)
+        # Convert generation to a 2D numpy array for easier manipulation
+        gen_array = np.array([list(map(int, individual)) for individual in generation])
+        
+        # Calculate the probability of a bit being 1 for each position
+        p = np.mean(gen_array, axis=0)
+        
+        # Handle cases where p_i might be 0 or 1 to avoid log2(0)
+        with np.errstate(divide='ignore', invalid='ignore'):
+            H_1 = np.where(p > 0, -p * np.log2(p), 0)
+            H_0 = np.where(p < 1, -(1-p) * np.log2(1-p), 0)
+        
+        # Sum the entropy contributions from both cases (bit=1 and bit=0)
+        H = np.sum(H_1 + H_0)
+        
+        # Add the calculated entropy for this generation to the VarianceScores
+        VarianceScores.append(H)
+
+    plt.figure(figsize=(10, 6))
+    plt.plot(VarianceScores, marker='o', linestyle='-', color='b')
+    plt.title('Variance (Entropy) Scores Over Generations')
+    plt.xlabel('Generation')
+    plt.ylabel('Variance (Entropy) Score')
+    plt.grid(True)
+    plt.show()
+    return VarianceScores
+    

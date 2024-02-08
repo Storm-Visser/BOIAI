@@ -48,7 +48,7 @@ def StartSim(AmountOfGen, Seed, UseLinReg, UseCrowding, UseReplacementSelection,
     if not UseLinReg :
         CreateSineGraph(PopEachGeneration, Constraint)
     CreateVarienceGraph(PopEachGeneration)
-    CreateGraph(Results) 
+    CreateGraph(Results, UseLinReg, regressor, data, Seed, AmountOfGen) 
     return
 
 def InitPop(BitstringLength, PopSize):
@@ -260,6 +260,7 @@ def SaveResults(Pop):
 def fitnessML(regressor: LinReg, data:pd.DataFrame, bitstring, Seed):
     # Create bitarray from bitstring, fromsting create 48 for 0 and 49 for 1, so use -ord(0) to substract 48
     BitArray = np.fromstring(bitstring ,'u1') - ord('0')
+    np.append(BitArray, 1)
     # Get the data corrosponding to the BitArray
     # print(data)
     X = regressor.get_columns(data.values, BitArray)
@@ -330,18 +331,28 @@ def CreateSineGraph(generationData, Constraint):
 
     plt.show()
 
-def CreateGraph(data):
+def CreateGraph(data, UseLinReg, regressor, mldata, Seed, AmountOfGen):
     # Extract the values for each column (Array 1, Array 2, Array 3)
     array1_values = [sublist[0] for sublist in data]
     array2_values = [sublist[1] for sublist in data]
+    if(UseLinReg):
+        # Generate some sample data for x and y
+        x = np.linspace(0, 10, AmountOfGen)  # Assuming 128 x-values
 
-    # Create a list of indices (x-values) to use as the x-axis
+        # Constant value for the line
+        array3_values = fitnessML(regressor, mldata, '1111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111', Seed)
+
+        # Create an array with constant_value repeated 128 times
+        constant_line = np.full_like(x, array3_values)
+        # Create a list of indices (x-values) to use as the x-axis
     indices = range(len(data))
 
     # Create a single graph for all points
     plt.figure(figsize=(10, 6))
     plt.plot(indices, array1_values, label='Best')
     plt.plot(indices, array2_values, label='Average')
+    if(UseLinReg):
+        plt.plot(indices, constant_line, label='All features')  
 
     plt.title('All Arrays')
     plt.xlabel('Generations')

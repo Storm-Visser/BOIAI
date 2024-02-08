@@ -389,6 +389,7 @@ def CreateVarienceGraph(Pop):
     plt.title('Variance (Entropy) Scores Over Generations')
     plt.xlabel('Generation')
     plt.ylabel('Variance (Entropy) Score')
+    plt.ylim(0,100)
     plt.grid(True)
     plt.show()
     return VarianceScores

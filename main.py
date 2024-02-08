@@ -11,6 +11,6 @@ EvoSystem.StartSim(
     MutationRate = 1,
     CrossoverRate = 0.7,
     PopSize = 30,
-    AmountOfParents = 4, #Always even, should be same as PopSize for deterministic crowding
-    Constraint = [80,100]
+    AmountOfParents = 30, #Always even
+    Constraint = None
 )
